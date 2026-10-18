@@ -3256,20 +3256,14 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Builds "user/logs/&lt;titleId&gt;-&lt;timestamp&gt;.log" next to the emulator
-    /// executable, following the same portable-data convention as savedata.
+    /// Builds "user/logs/&lt;titleId&gt;-&lt;timestamp&gt;.log" under the user data root,
+    /// following the same convention as savedata.
     /// </summary>
     private string? BuildLogFilePath(string? titleId)
     {
         try
         {
-            var exeDirectory = Path.GetDirectoryName(_emulatorExePath) ?? AppContext.BaseDirectory;
-            if (string.IsNullOrEmpty(exeDirectory))
-            {
-                return null;
-            }
-
-            var logsDirectory = Path.Combine(exeDirectory, "user", "logs");
+            var logsDirectory = Path.Combine(SharpEmu.Libs.SharpEmuPaths.DataRoot, "user", "logs");
             Directory.CreateDirectory(logsDirectory);
 
             var id = string.IsNullOrWhiteSpace(titleId) ? "UNKNOWN" : titleId;
