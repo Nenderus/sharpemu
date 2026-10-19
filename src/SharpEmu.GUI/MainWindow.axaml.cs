@@ -2887,7 +2887,8 @@ public partial class MainWindow : Window
         }
 
         var directory = ZArchive.IsArchivePath(game.Path)
-            ? ZArchiveCache.GetCacheRoot(game.Path)
+            ? ZArchiveCache.GetCacheRoot(game.Path,
+                Path.Combine(SharpEmu.Libs.SharpEmuPaths.DataRoot, "user", "zar-cache"))
             : Path.GetDirectoryName(game.Path);
         var sndPath = directory is null ? null : Path.Combine(directory, "sce_sys", "snd0.at9");
         if (sndPath is not null && File.Exists(sndPath))
