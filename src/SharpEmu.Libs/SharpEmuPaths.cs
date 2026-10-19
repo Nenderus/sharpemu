@@ -9,11 +9,15 @@ namespace SharpEmu.Libs;
 /// <summary>
 /// Resolves the root directory that holds user-writable data: GUI settings,
 /// the library cache, custom environment and per-game configs, save data,
-/// logs and dumps. On Linux the data always lives under the XDG data
-/// directory so a system-installed build never writes next to a read-only
-/// executable; Windows and macOS keep the portable layout with the data
-/// next to the executable. <c>SHARPEMU_USER_DIR</c> overrides the choice on
-/// every platform.
+/// logs and dumps.
+///
+/// The emulator is portable by default and keeps its data next to the
+/// executable. System-style installs (package managers, Program Files,
+/// /Applications) own a read-only executable directory, so there the data
+/// falls back to the platform's per-user application directory:
+/// <c>~/.local/share/SharpEmu</c> (XDG) on Linux, <c>%APPDATA%\SharpEmu</c>
+/// on Windows and <c>~/Library/Application Support/SharpEmu</c> on macOS.
+/// <c>SHARPEMU_USER_DIR</c> overrides the choice on every platform.
 /// </summary>
 public static class SharpEmuPaths
 {
@@ -27,21 +31,18 @@ public static class SharpEmuPaths
             return Path.GetFullPath(configured);
         }
 
-        if (!OperatingSystem.IsLinux())
+        if (Directory.Exists(Path.Combine(AppContext.BaseDirectory, "user")) ||
+            IsWritable(AppContext.BaseDirectory))
         {
             return AppContext.BaseDirectory;
         }
 
-        var dataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
-        if (string.IsNullOrWhiteSpace(dataHome))
-        {
-            dataHome = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                ".local",
-                "share");
-        }
+        var root = OperatingSystem.IsLinux()
+            ? Path.Combine(XdgDataHome(), "SharpEmu")
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "SharpEmu");
 
-        var root = Path.Combine(dataHome, "SharpEmu");
         try
         {
             // Create the root eagerly: consumers only create their own
@@ -56,5 +57,37 @@ public static class SharpEmuPaths
         }
 
         return root;
+    }
+
+    private static string XdgDataHome()
+    {
+        var dataHome = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+        if (!string.IsNullOrWhiteSpace(dataHome))
+        {
+            return dataHome;
+        }
+
+        return Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+            ".local",
+            "share");
+    }
+
+    private static bool IsWritable(string directory)
+    {
+        try
+        {
+            var probe = Path.Combine(directory, $".sharpemu-write-probe-{Environment.ProcessId}");
+            using (File.Create(probe))
+            {
+            }
+
+            File.Delete(probe);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 }
