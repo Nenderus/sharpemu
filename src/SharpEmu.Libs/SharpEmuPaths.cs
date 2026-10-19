@@ -17,11 +17,55 @@ namespace SharpEmu.Libs;
 /// falls back to the platform's per-user application directory:
 /// <c>~/.local/share/SharpEmu</c> (XDG) on Linux, <c>%APPDATA%\SharpEmu</c>
 /// on Windows and <c>~/Library/Application Support/SharpEmu</c> on macOS.
+/// The GUI's portable-data option writes a <c>portable.txt</c> marker beside
+/// the executable that forces the portable layout regardless of writability.
 /// <c>SHARPEMU_USER_DIR</c> overrides the choice on every platform.
 /// </summary>
 public static class SharpEmuPaths
 {
+    public const string PortableMarkerFileName = "portable.txt";
+
     public static string DataRoot { get; } = ResolveDataRoot();
+
+    /// <summary>Marker file beside the executable that forces portable mode.</summary>
+    public static string PortableMarkerPath =>
+        Path.Combine(AppContext.BaseDirectory, PortableMarkerFileName);
+
+    /// <summary>True when the portable marker file exists beside the executable.</summary>
+    public static bool IsPortableMarkerPresent() => File.Exists(PortableMarkerPath);
+
+    /// <summary>
+    /// True when the executable directory is writable, i.e. portable mode can
+    /// still be enabled from the GUI.
+    /// </summary>
+    public static bool CanWriteExecutableDirectory() => IsWritable(AppContext.BaseDirectory);
+
+    /// <summary>
+    /// Creates or removes the portable marker. Returns false when the marker
+    /// could not be written or removed (read-only executable directory).
+    /// </summary>
+    public static bool SetPortableMarker(bool enabled)
+    {
+        try
+        {
+            if (enabled)
+            {
+                File.WriteAllText(
+                    PortableMarkerPath,
+                    "SharpEmu keeps its data (settings, saves, caches, logs) next to the executable while this file exists.\n");
+            }
+            else
+            {
+                File.Delete(PortableMarkerPath);
+            }
+
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 
     private static string ResolveDataRoot()
     {
@@ -31,7 +75,8 @@ public static class SharpEmuPaths
             return Path.GetFullPath(configured);
         }
 
-        if (Directory.Exists(Path.Combine(AppContext.BaseDirectory, "user")) ||
+        if (IsPortableMarkerPresent() ||
+            Directory.Exists(Path.Combine(AppContext.BaseDirectory, "user")) ||
             IsWritable(AppContext.BaseDirectory))
         {
             return AppContext.BaseDirectory;

@@ -385,6 +385,16 @@ public partial class MainWindow : Window
         RefreshRateBox.SelectionChanged += (_, _) => OnHostRefreshRateChanged();
         ScalingModeBox.SelectionChanged += (_, _) => _settings.ScalingMode = SelectedComboText(ScalingModeBox, "Fit");
         VSyncToggle.IsCheckedChanged += (_, _) => _settings.VSync = VSyncToggle.IsChecked == true;
+        PortableDataToggle.IsCheckedChanged += (_, _) =>
+        {
+            var enabled = PortableDataToggle.IsChecked == true;
+            if (!SharpEmu.Libs.SharpEmuPaths.SetPortableMarker(enabled))
+            {
+                // Read-only executable directory: revert the switch, the
+                // marker could not be written.
+                PortableDataToggle.IsChecked = !enabled;
+            }
+        };
         HdrModeBox.SelectionChanged += (_, _) => _settings.HdrMode = SelectedComboText(HdrModeBox, "Auto");
         OverlayEnabledToggle.IsCheckedChanged += (_, _) => _settings.OverlayEnabled = OverlayEnabledToggle.IsChecked == true;
         OverlayModeBox.SelectionChanged += (_, _) => _settings.OverlayMode = SelectedComboText(OverlayModeBox, "TitleBar");
@@ -1507,6 +1517,9 @@ public partial class MainWindow : Window
         LoadHostDisplayOptions();
         ScalingModeBox.SelectedIndex = ChoiceIndex(_settings.ScalingMode, "Fit", "Cover", "Stretch", "Integer");
         VSyncToggle.IsChecked = _settings.VSync;
+        PortableDataToggle.IsEnabled = SharpEmu.Libs.SharpEmuPaths.IsPortableMarkerPresent() ||
+            SharpEmu.Libs.SharpEmuPaths.CanWriteExecutableDirectory();
+        PortableDataToggle.IsChecked = SharpEmu.Libs.SharpEmuPaths.IsPortableMarkerPresent();
         HdrModeBox.SelectedIndex = ChoiceIndex(_settings.HdrMode, "Auto", "On", "Off");
         OverlayEnabledToggle.IsChecked = _settings.OverlayEnabled;
         OverlayModeBox.SelectedIndex = ChoiceIndex(_settings.OverlayMode, "Full", "Minimal", "TitleBar");
